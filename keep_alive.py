@@ -25,7 +25,7 @@ def health():
 
 
 def run():
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=5000)
 
 
 def keep_alive():
@@ -33,4 +33,4 @@ def keep_alive():
     t = Thread(target=run)
     t.daemon = True
     t.start()
-    print("Keep-alive server started on port 8080")
+    print("Keep-alive server started on port 5000")
