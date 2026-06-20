@@ -43,14 +43,25 @@ class Product:
         if self.stock == 0:
             return "❌ Нет в наличии"
         if self.stock <= 3:
-            return f"⚠️ Мало: {self.stock} шт."
-        return f"✅ В наличии: {self.stock} шт."
+            return "⚠️ Мало в наличии"
+        return "✅ В наличии"
 
     @property
     def price_formatted(self) -> str:
         return f"{self.price:,}".replace(",", " ") + " ₽"
 
     def card_text(self) -> str:
+        if self.category == CATEGORY_CONSULT:
+            lines = [
+                f"🩺 <b>Индивидуальная консультация</b>",
+                f"",
+                f"Персональное сопровождение, разбор программ и ответы на вопросы.",
+                f"",
+                f"📩 Для получения информации:",
+                f"<b>{CONTACT}</b>",
+            ]
+            return "\n".join(lines)
+
         emoji = CATEGORY_EMOJI.get(self.category, "📦")
         lines = [
             f"{emoji} <b>{self.name}</b>",
