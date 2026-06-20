@@ -46,8 +46,53 @@ def kb_categories(available_categories: List[str]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def kb_drug_list(drug_names: List[str], category: str, page: int = 0) -> InlineKeyboardMarkup:
+    """Paginated list of unique drug names within a category."""
+    PAGE_SIZE = 8
+    start = page * PAGE_SIZE
+    end = start + PAGE_SIZE
+    page_drugs = drug_names[start:end]
+    total_pages = (len(drug_names) + PAGE_SIZE - 1) // PAGE_SIZE
+
+    builder = InlineKeyboardBuilder()
+    for name in page_drugs:
+        builder.button(text=name, callback_data=f"drug:{category}:{name}")
+    builder.adjust(1)
+
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(
+            InlineKeyboardButton(text="◀️ Назад", callback_data=f"page:{category}:{page - 1}")
+        )
+    if page < total_pages - 1:
+        nav_buttons.append(
+            InlineKeyboardButton(text="▶️ Далее", callback_data=f"page:{category}:{page + 1}")
+        )
+    if nav_buttons:
+        builder.row(*nav_buttons)
+    if total_pages > 1:
+        builder.row(
+            InlineKeyboardButton(text=f"📄 {page + 1} / {total_pages}", callback_data="noop")
+        )
+
+    builder.row(InlineKeyboardButton(text="⬅️ К категориям", callback_data="menu:catalog"))
+    return builder.as_markup()
+
+
+def kb_dosage_list(products: List[Product], category: str) -> InlineKeyboardMarkup:
+    """Dosage variants for a single drug, sorted by price."""
+    builder = InlineKeyboardBuilder()
+    for p in products:
+        stock_icon = "✅" if p.in_stock else "❌"
+        label = f"{stock_icon} {p.dosage} — {p.price_formatted}"
+        builder.button(text=label, callback_data=f"prod:{p.product_id}")
+    builder.adjust(1)
+    builder.row(InlineKeyboardButton(text="⬅️ Назад", callback_data=f"cat:{category}"))
+    return builder.as_markup()
+
+
 def kb_product_list(products: List[Product], category: str, page: int = 0) -> InlineKeyboardMarkup:
-    """Paginated product list keyboard. Shows PAGE_SIZE products per page."""
+    """Paginated flat product list (kept for backward compatibility)."""
     PAGE_SIZE = 8
     start = page * PAGE_SIZE
     end = start + PAGE_SIZE

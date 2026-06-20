@@ -106,6 +106,21 @@ class ProductsService:
                 seen.append(p.category)
         return seen
 
+    async def get_drug_names_by_category(self, category: str) -> List[str]:
+        """Return unique drug names in a category, preserving xlsx order."""
+        products = await self.get_products_by_category(category)
+        seen: List[str] = []
+        for p in products:
+            if p.name not in seen:
+                seen.append(p.name)
+        return seen
+
+    async def get_products_by_drug(self, category: str, drug_name: str) -> List[Product]:
+        """Return all dosage variants of a drug, sorted by price ascending."""
+        products = await self.get_products_by_category(category)
+        variants = [p for p in products if p.name.lower() == drug_name.lower()]
+        return sorted(variants, key=lambda p: p.price)
+
     def invalidate_cache(self) -> None:
         self._cache.clear()
         logger.info("Product cache cleared")
