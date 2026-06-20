@@ -1,5 +1,5 @@
 """
-handlers/info.py — Static information pages: delivery, payment, price list.
+handlers/info.py — Static information pages: delivery, payment, price list, important info.
 """
 import logging
 
@@ -14,6 +14,8 @@ from utils.helpers import safe_edit_message
 logger = logging.getLogger(__name__)
 router = Router(name="info")
 
+CONTACT = "@Ten_genesis"
+
 # ── Delivery ──────────────────────────────────────────────────────────────────
 
 DELIVERY_TEXT = (
@@ -21,8 +23,8 @@ DELIVERY_TEXT = (
     "📦 Курьерская служба: <b>СДЭК</b>\n"
     "⏱ Срок доставки: <b>3–6 рабочих дней</b>\n"
     "📍 Доставляем по всей России\n\n"
-    "🔖 Трек-номер для отслеживания предоставляется сразу после отправки заказа.\n\n"
-    "📞 По вопросам доставки обращайтесь к менеджеру."
+    "🔖 Трек-номер для отслеживания отправляется сразу после передачи заказа в службу доставки.\n\n"
+    f"📞 По вопросам доставки: <b>{CONTACT}</b>"
 )
 
 
@@ -40,7 +42,7 @@ async def cb_delivery(callback: CallbackQuery) -> None:
 
 PAYMENT_TEXT = (
     "💳 <b>Оплата</b>\n\n"
-    "После оформления заказа с вами свяжется менеджер для уточнения деталей и оплаты.\n\n"
+    "После оформления заказа менеджер свяжется с вами для уточнения деталей и оплаты.\n\n"
     "💰 <b>Доступные способы оплаты:</b>\n"
     "• Банковский перевод (СБП)\n"
     "• Карта Сбербанк / Тинькофф\n"
@@ -80,7 +82,6 @@ async def cb_price_list(callback: CallbackQuery) -> None:
         )
         return
 
-    # Group by category
     categories: dict[str, list] = {}
     for p in all_products:
         categories.setdefault(p.category, []).append(p)
@@ -96,7 +97,6 @@ async def cb_price_list(callback: CallbackQuery) -> None:
     lines.append("\n\n📦 Для заказа откройте Каталог.")
     text = "\n".join(lines)
 
-    # Telegram message limit is 4096 chars — trim if needed
     if len(text) > 4000:
         text = text[:3990] + "\n\n…(полный список в каталоге)"
 
@@ -104,4 +104,28 @@ async def cb_price_list(callback: CallbackQuery) -> None:
         message=callback.message,
         text=text,
         reply_markup=kb_price_list(),
+    )
+
+
+# ── Important Information ─────────────────────────────────────────────────────
+
+IMPORTANT_TEXT = (
+    "⚠️ <b>Важная информация 18+</b>\n\n"
+    "Все товары поставляются исключительно <b>для научно-исследовательских целей</b>.\n\n"
+    "Оформляя заказ, покупатель подтверждает, что:\n"
+    "• является совершеннолетним;\n"
+    "• осознаёт назначение приобретаемых материалов;\n"
+    "• принимает на себя полную ответственность за их использование.\n\n"
+    "<b>Применение на людях или животных запрещено.</b>\n\n"
+    "Genesis Peptide Store не несёт ответственности за нарушение данного условия."
+)
+
+
+@router.callback_query(F.data == "menu:important")
+async def cb_important(callback: CallbackQuery) -> None:
+    await callback.answer()
+    await safe_edit_message(
+        message=callback.message,
+        text=IMPORTANT_TEXT,
+        reply_markup=kb_back_to_main(),
     )

@@ -18,10 +18,13 @@ from utils.helpers import safe_send_message, safe_edit_message
 logger = logging.getLogger(__name__)
 router = Router(name="manager")
 
+CONTACT = "@Ten_genesis"
+
 MANAGER_INTRO_TEXT = (
     "📞 <b>Связь с менеджером</b>\n\n"
     "Напишите ваш вопрос или сообщение ниже.\n"
-    "Менеджер ответит вам в ближайшее время."
+    "Менеджер ответит вам в ближайшее время.\n\n"
+    f"Также вы можете написать напрямую: <b>{CONTACT}</b>"
 )
 
 
@@ -67,7 +70,8 @@ async def msg_receive_manager_message(
         await message.answer(
             text=(
                 "✅ <b>Сообщение отправлено!</b>\n\n"
-                "Менеджер свяжется с вами в ближайшее время."
+                "Менеджер свяжется с вами в ближайшее время.\n\n"
+                f"Также можно написать напрямую: <b>{CONTACT}</b>"
             ),
             reply_markup=kb_back_to_main(),
             parse_mode="HTML",
@@ -76,8 +80,8 @@ async def msg_receive_manager_message(
         logger.error("Failed to forward manager message from user %d", user.id)
         await message.answer(
             text=(
-                "❌ Не удалось отправить сообщение. Попробуйте позже.\n"
-                "Или напишите напрямую: @your_manager_username"
+                f"❌ Не удалось отправить сообщение. Попробуйте позже.\n"
+                f"Или напишите напрямую: <b>{CONTACT}</b>"
             ),
             reply_markup=kb_back_to_main(),
             parse_mode="HTML",

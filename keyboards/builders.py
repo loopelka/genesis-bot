@@ -22,10 +22,11 @@ def kb_main_menu() -> InlineKeyboardMarkup:
         ("💳 Оплата", "menu:payment"),
         ("❓ FAQ", "menu:faq"),
         ("📞 Менеджер", "menu:manager"),
+        ("⚠️ Важная информация", "menu:important"),
     ]
     for text, callback in buttons:
         builder.button(text=text, callback_data=callback)
-    builder.adjust(2)
+    builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
 
@@ -57,8 +58,9 @@ def kb_product_list(products: List[Product], category: str, page: int = 0) -> In
 
     for p in page_products:
         stock_icon = "✅" if p.in_stock else "❌"
-        label = f"{stock_icon} {p.name} {p.dosage} — {p.price_formatted}"
+        label = f"{stock_icon} {p.name} {p.dosage}"
         builder.button(text=label, callback_data=f"prod:{p.product_id}")
+    builder.adjust(1)
 
     nav_buttons = []
     if page > 0:
@@ -116,20 +118,9 @@ def kb_order_confirm(product_id: int) -> InlineKeyboardMarkup:
 
 # ── FAQ ───────────────────────────────────────────────────────────────────────
 
-def kb_faq_list(total_entries: int) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    for i in range(total_entries):
-        builder.button(text=f"❓ Вопрос {i + 1}", callback_data=f"faq:{i}")
-    builder.button(text="⬅️ Главное меню", callback_data="menu:main")
-    builder.adjust(2)
-    return builder.as_markup()
-
-
 def kb_faq_back() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="📋 Все вопросы", callback_data="menu:faq")
     builder.button(text="⬅️ Главное меню", callback_data="menu:main")
-    builder.adjust(1)
     return builder.as_markup()
 
 

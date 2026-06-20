@@ -1,7 +1,7 @@
 """
 services/models.py — Domain models for Genesis Peptide Store.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -19,6 +19,8 @@ CATEGORY_EMOJI = {
     CATEGORY_SUPPLIES: "🧰",
     CATEGORY_CONSULT: "🩺",
 }
+
+CONTACT = "@Ten_genesis"
 
 
 @dataclass
@@ -57,6 +59,8 @@ class Product:
             f"⚗️ <b>Дозировка:</b> {self.dosage}",
             f"💰 <b>Цена:</b> {self.price_formatted}",
             f"{self.stock_label}",
+            f"",
+            f"📞 Вопросы: <b>{CONTACT}</b>",
         ]
         return "\n".join(lines)
 

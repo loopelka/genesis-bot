@@ -1,5 +1,5 @@
 """
-handlers/faq.py — FAQ section with interactive per-question navigation.
+handlers/faq.py — FAQ section: single formatted page with all Q&A visible.
 """
 import logging
 
@@ -7,49 +7,34 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 from config.faq import FAQ_ENTRIES
-from keyboards import kb_faq_list, kb_faq_back
+from keyboards import kb_faq_back
 from utils.helpers import safe_edit_message
 
 logger = logging.getLogger(__name__)
 router = Router(name="faq")
 
-FAQ_MENU_TEXT = (
-    "❓ <b>Часто задаваемые вопросы</b>\n\n"
-    "Выберите вопрос, чтобы увидеть ответ:"
-)
+
+def _build_faq_text() -> str:
+    lines = ["❓ <b>Часто задаваемые вопросы</b>\n"]
+    for i, entry in enumerate(FAQ_ENTRIES, start=1):
+        lines.append(f"<b>{i}. {entry.question}</b>")
+        lines.append(entry.answer)
+        lines.append("")
+    lines.append("📞 Остались вопросы? Пишите: @Ten_genesis")
+    return "\n".join(lines)
+
+
+FAQ_TEXT = _build_faq_text()
 
 
 @router.callback_query(F.data == "menu:faq")
 async def cb_faq_menu(callback: CallbackQuery) -> None:
-    """Show FAQ question list."""
+    """Show full FAQ page with all answers."""
     await callback.answer()
-    await safe_edit_message(
-        message=callback.message,
-        text=FAQ_MENU_TEXT,
-        reply_markup=kb_faq_list(len(FAQ_ENTRIES)),
-    )
 
-
-@router.callback_query(F.data.startswith("faq:"))
-async def cb_faq_entry(callback: CallbackQuery) -> None:
-    """Show a specific FAQ entry."""
-    await callback.answer()
-    try:
-        index = int(callback.data.split(":")[1])
-    except (ValueError, IndexError):
-        await callback.answer("❌ Ошибка", show_alert=True)
-        return
-
-    if index < 0 or index >= len(FAQ_ENTRIES):
-        await callback.answer("❌ Вопрос не найден", show_alert=True)
-        return
-
-    entry = FAQ_ENTRIES[index]
-    text = (
-        f"❓ <b>Вопрос {index + 1} из {len(FAQ_ENTRIES)}</b>\n\n"
-        f"<b>{entry.question}</b>\n\n"
-        f"{entry.answer}"
-    )
+    text = FAQ_TEXT
+    if len(text) > 4000:
+        text = text[:3990] + "\n\n…(продолжение у менеджера: @Ten_genesis)"
 
     await safe_edit_message(
         message=callback.message,
