@@ -1,4 +1,4 @@
-from .states import OrderStates, ManagerStates
+from .states import OrderStates, ManagerStates, CartCheckoutStates
 from .helpers import (
     safe_send_message,
     safe_send_photo,
@@ -10,6 +10,7 @@ from .helpers import (
 __all__ = [
     "OrderStates",
     "ManagerStates",
+    "CartCheckoutStates",
     "safe_send_message",
     "safe_send_photo",
     "safe_edit_message",

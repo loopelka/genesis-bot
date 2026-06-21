@@ -12,6 +12,12 @@ from .builders import (
     kb_cancel_manager,
     kb_back_to_main,
     kb_price_list,
+    kb_cart,
+    kb_cart_empty,
+    kb_checkout_contact,
+    kb_checkout_skip_comment,
+    kb_cart_confirm,
+    kb_cart_cancel_checkout,
 )
 
 __all__ = [
@@ -28,4 +34,10 @@ __all__ = [
     "kb_cancel_manager",
     "kb_back_to_main",
     "kb_price_list",
+    "kb_cart",
+    "kb_cart_empty",
+    "kb_checkout_contact",
+    "kb_checkout_skip_comment",
+    "kb_cart_confirm",
+    "kb_cart_cancel_checkout",
 ]
