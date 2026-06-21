@@ -14,6 +14,7 @@ callback_data used (all prefixed cart: — no conflicts with existing handlers):
     cart:confirm           — final order confirmation
     cart:cancel_checkout   — abort checkout, return to cart view
 """
+import html
 import logging
 
 from aiogram import Router, F, Bot
@@ -37,7 +38,7 @@ from keyboards import (
 from services import products_service
 from services.cart_service import cart_service
 from utils import CartCheckoutStates
-from utils.helpers import safe_edit_message, safe_send_message
+from utils.helpers import safe_edit_message, safe_send_message, stock_allows
 
 logger = logging.getLogger(__name__)
 router = Router(name="cart")
@@ -124,6 +125,15 @@ async def cb_add_to_cart(callback: CallbackQuery) -> None:
         await callback.answer("❌ Товар недоступен", show_alert=True)
         return
 
+    # Oversell guard: do not let cart quantity exceed available stock.
+    current_items = await cart_service.get_items(callback.from_user.id)
+    if not stock_allows(current_items.get(product_id, 0), product.stock):
+        await callback.answer(
+            f"❌ Доступно только {product.stock} шт. — больше добавить нельзя.",
+            show_alert=True,
+        )
+        return
+
     qty = await cart_service.add_item(callback.from_user.id, product_id)
     await callback.answer(
         f"✅ {product.name} {product.dosage} добавлен в корзину (× {qty})",
@@ -144,6 +154,14 @@ async def cb_cart_inc(callback: CallbackQuery) -> None:
     except ValueError:
         await callback.answer()
         return
+
+    # Oversell guard: cap increment at available stock.
+    product = await products_service.get_product_by_id(product_id)
+    current_items = await cart_service.get_items(callback.from_user.id)
+    if product is not None and not stock_allows(current_items.get(product_id, 0), product.stock):
+        await callback.answer(f"❌ Доступно только {product.stock} шт.", show_alert=True)
+        return
+
     await cart_service.increment(callback.from_user.id, product_id)
     await callback.answer()
     text, keyboard, _ = await _build_cart_view(callback.from_user.id)
@@ -409,24 +427,57 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
         if product:
             resolved.append((product, qty))
 
+    # Oversell guard at checkout: revalidate every line against live stock.
+    oversold = [(p, qty) for p, qty in resolved if not stock_allows(0, p.stock, qty)]
+    if oversold:
+        warn = "\n".join(
+            f"• {p.name} {p.dosage}: в наличии {p.stock}, в корзине {qty}"
+            for p, qty in oversold
+        )
+        text, keyboard, _ = await _build_cart_view(user_id)
+        await safe_edit_message(
+            callback.message,
+            text=(
+                "⚠️ <b>Недостаточно товара на складе:</b>\n"
+                f"{warn}\n\n"
+                "Уменьшите количество и оформите заказ снова."
+            ) + "\n\n" + text,
+            reply_markup=keyboard,
+        )
+        await state.clear()
+        return
+
     total   = sum(p.price * qty for p, qty in resolved)
     comment = data.get("customer_comment", "") or "—"
 
     item_lines = "\n".join(
-        f"{p.name} {p.dosage} × {qty}" for p, qty in resolved
+        f"{html.escape(p.name)} {html.escape(p.dosage)} × {qty}" for p, qty in resolved
     )
 
+    # Escape all user-supplied fields — message is sent with HTML parse mode.
     admin_text = (
         f"🛒 <b>Новый заказ</b>\n\n"
-        f"Клиент: {data.get('customer_name', '—')}\n"
-        f"Связь: {data.get('customer_contact', '—')}\n"
-        f"Страна: {data.get('customer_country', '—')}\n\n"
+        f"Клиент: {html.escape(data.get('customer_name', '—'))}\n"
+        f"Связь: {html.escape(data.get('customer_contact', '—'))}\n"
+        f"Страна: {html.escape(data.get('customer_country', '—'))}\n\n"
         f"{item_lines}\n\n"
         f"Итого: <b>{_fmt_price(total)}</b>\n\n"
-        f"Комментарий:\n{comment}"
+        f"Комментарий:\n{html.escape(comment)}"
     )
 
-    await safe_send_message(bot=bot, chat_id=settings.admin_id, text=admin_text)
+    sent = await safe_send_message(bot=bot, chat_id=settings.admin_id, text=admin_text)
+    if not sent:
+        # Delivery failed — preserve cart and state so the user can retry.
+        logger.error("Cart order delivery FAILED for user=%d; cart preserved", user_id)
+        await safe_edit_message(
+            callback.message,
+            text=(
+                "❌ <b>Не удалось отправить заказ менеджеру.</b>\n\n"
+                "Корзина сохранена. Попробуйте подтвердить ещё раз."
+            ),
+            reply_markup=kb_cart_confirm(),
+        )
+        return
 
     await cart_service.clear(user_id)
     await state.clear()

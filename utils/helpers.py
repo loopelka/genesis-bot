@@ -96,3 +96,8 @@ def truncate(text: str, max_length: int = 100) -> str:
     if len(text) <= max_length:
         return text
     return text[: max_length - 3] + "..."
+
+
+def stock_allows(current_qty: int, stock: int, add: int = 1) -> bool:
+    """Oversell guard: True if adding `add` units keeps cart qty within `stock`."""
+    return current_qty + add <= stock

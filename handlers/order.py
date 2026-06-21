@@ -24,7 +24,7 @@ router = Router(name="order")
 # ── Step 1: Start order ───────────────────────────────────────────────────────
 
 @router.callback_query(F.data.startswith("order:") & ~F.data.startswith("order:confirm")
-                       & ~F.data.startswith("order:edit") & ~F.data.eq("order:cancel"))
+                       & ~F.data.startswith("order:edit") & (F.data != "order:cancel"))
 async def cb_start_order(callback: CallbackQuery, state: FSMContext) -> None:
     """Triggered by 'order:<product_id>' — begin the order flow."""
     await callback.answer()
@@ -191,7 +191,17 @@ async def cb_confirm_order(callback: CallbackQuery, state: FSMContext, bot: Bot)
         text=order.admin_notification(),
     )
     if not admin_sent:
+        # Do NOT clear state/confirm success — the order was not delivered.
         logger.error("Failed to deliver order notification to admin %d", settings.admin_id)
+        await safe_edit_message(
+            message=callback.message,
+            text=(
+                "❌ <b>Не удалось отправить заказ.</b>\n\n"
+                "Попробуйте подтвердить ещё раз или свяжитесь с менеджером."
+            ),
+            reply_markup=kb_order_confirm(data["product_id"]),
+        )
+        return
 
     # Thank the user
     await state.clear()
