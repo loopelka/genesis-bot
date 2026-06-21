@@ -44,7 +44,6 @@ def kb_goals() -> InlineKeyboardMarkup:
         ("❤️ Долголетие и Wellbeing",             "goal:longevity"),
         ("📦 Расходники",                         "goal:supplies"),
         ("📞 Консультация",                       "goal:consult"),
-        ("📚 Полный каталог",                     "goal:all"),
         ("⬅️ Главное меню",                      "menu:main"),
     ]
     for text, cb in rows:
@@ -53,7 +52,7 @@ def kb_goals() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-# ── Catalog: category list (used in goal:all) ─────────────────────────────────
+# ── Catalog: category list ────────────────────────────────────────────────────
 
 def kb_categories(available_categories: List[str]) -> InlineKeyboardMarkup:
     """Show every category that has products, skip empty ones."""

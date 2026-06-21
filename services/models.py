@@ -5,13 +5,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-# ─── Canonical category names ────────────────────────────────────────────────
+# ─── Canonical category names (7 main + consultation) ────────────────────────
 CATEGORY_WEIGHT    = "Контроль веса"
-CATEGORY_CATALOG   = "Каталог"
 CATEGORY_GROWTH    = "Рост мышц"
 CATEGORY_REGEN     = "Регенерация"
-CATEGORY_COGNITIVE = "Когнитивное"
 CATEGORY_AESTHETIC = "Эстетика"
+CATEGORY_COGNITIVE = "Когнитивное"
 CATEGORY_LONGEVITY = "Долголетие"
 CATEGORY_SUPPLIES  = "Расходники"
 CATEGORY_CONSULT   = "Консультация"
@@ -24,7 +23,6 @@ ALL_CATEGORIES = [
     CATEGORY_COGNITIVE,
     CATEGORY_LONGEVITY,
     CATEGORY_SUPPLIES,
-    CATEGORY_CATALOG,
 ]
 
 CATEGORY_EMOJI = {
@@ -35,7 +33,6 @@ CATEGORY_EMOJI = {
     CATEGORY_COGNITIVE: "🧠",
     CATEGORY_LONGEVITY: "❤️",
     CATEGORY_SUPPLIES:  "📦",
-    CATEGORY_CATALOG:   "📚",
     CATEGORY_CONSULT:   "🩺",
 }
 

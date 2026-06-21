@@ -4,8 +4,7 @@ handlers/catalog.py — Catalog browsing.
 Navigation flow:
     menu:catalog            → goal selection (kb_goals)
     goal:{key}              → drug list for mapped category
-    goal:consult            → consultation info page
-    goal:all                → all-categories view (kb_categories)
+    goal:consult            → consultation info page (static)
     cat:{category}          → drug list for category (page 0)
     page:{category}:{n}     → drug list page n
     drug:{category}:{name}  → dosage list (or direct card if only 1 variant)
@@ -18,7 +17,6 @@ from aiogram.types import CallbackQuery
 
 from keyboards import (
     kb_goals,
-    kb_categories,
     kb_drug_list,
     kb_dosage_list,
     kb_product_card,
@@ -94,20 +92,6 @@ async def cb_goal_consult(callback: CallbackQuery) -> None:
         reply_markup=builder.as_markup(),
     )
 
-
-@router.callback_query(F.data == "goal:all")
-async def cb_goal_all(callback: CallbackQuery) -> None:
-    """Show all available categories."""
-    await callback.answer()
-    available = await products_service.get_available_categories()
-    await safe_edit_message(
-        message=callback.message,
-        text=(
-            "📚 <b>Полный каталог</b>\n\n"
-            "Выберите категорию:"
-        ),
-        reply_markup=kb_categories(available),
-    )
 
 
 # ── Category → drug list ──────────────────────────────────────────────────────
