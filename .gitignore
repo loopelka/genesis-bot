@@ -61,3 +61,6 @@ users.json
 carts.json
 *.json.tmp
 *.json.corrupt.*
+
+# Local audit artifacts (kept local, not version-controlled)
+docs/audits/
