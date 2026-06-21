@@ -1,5 +1,6 @@
 from .builders import (
     kb_main_menu,
+    kb_goals,
     kb_categories,
     kb_drug_list,
     kb_dosage_list,
@@ -15,6 +16,7 @@ from .builders import (
 
 __all__ = [
     "kb_main_menu",
+    "kb_goals",
     "kb_categories",
     "kb_drug_list",
     "kb_dosage_list",

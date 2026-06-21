@@ -6,33 +6,53 @@ from typing import Optional
 
 
 # ─── Canonical category names ────────────────────────────────────────────────
-CATEGORY_VIALS = "Виалки"
-CATEGORY_SPRAYS = "Спреи"
-CATEGORY_SUPPLIES = "Расходники"
-CATEGORY_CONSULT = "Консультация"
+CATEGORY_WEIGHT    = "Контроль веса"
+CATEGORY_CATALOG   = "Каталог"
+CATEGORY_GROWTH    = "Рост мышц"
+CATEGORY_REGEN     = "Регенерация"
+CATEGORY_COGNITIVE = "Когнитивное"
+CATEGORY_AESTHETIC = "Эстетика"
+CATEGORY_LONGEVITY = "Долголетие"
+CATEGORY_SUPPLIES  = "Расходники"
+CATEGORY_CONSULT   = "Консультация"
 
-ALL_CATEGORIES = [CATEGORY_VIALS, CATEGORY_SPRAYS, CATEGORY_SUPPLIES, CATEGORY_CONSULT]
+ALL_CATEGORIES = [
+    CATEGORY_WEIGHT,
+    CATEGORY_GROWTH,
+    CATEGORY_REGEN,
+    CATEGORY_AESTHETIC,
+    CATEGORY_COGNITIVE,
+    CATEGORY_LONGEVITY,
+    CATEGORY_SUPPLIES,
+    CATEGORY_CATALOG,
+]
 
 CATEGORY_EMOJI = {
-    CATEGORY_VIALS: "💉",
-    CATEGORY_SPRAYS: "🫧",
-    CATEGORY_SUPPLIES: "🧰",
-    CATEGORY_CONSULT: "🩺",
+    CATEGORY_WEIGHT:    "🔥",
+    CATEGORY_GROWTH:    "💪",
+    CATEGORY_REGEN:     "🩹",
+    CATEGORY_AESTHETIC: "✨",
+    CATEGORY_COGNITIVE: "🧠",
+    CATEGORY_LONGEVITY: "❤️",
+    CATEGORY_SUPPLIES:  "📦",
+    CATEGORY_CATALOG:   "📚",
+    CATEGORY_CONSULT:   "🩺",
 }
 
-CONTACT = "@Ten_genesis"
+CONTACT     = "@Ten_genesis"
+CONTACT_URL = "https://t.me/Ten_genesis"
 
 
 @dataclass
 class Product:
     """Represents a single product row from products.xlsx."""
     product_id: int
-    category: str
-    name: str
-    dosage: str
-    price: int
-    stock: int
-    photo_id: str
+    category:   str
+    name:       str
+    dosage:     str
+    price:      int
+    stock:      int
+    photo_id:   str
 
     @property
     def in_stock(self) -> bool:
@@ -52,28 +72,22 @@ class Product:
 
     def card_text(self) -> str:
         if self.category == CATEGORY_CONSULT:
-            lines = [
-                f"🩺 <b>Индивидуальная консультация</b>",
-                f"",
-                f"Персональное сопровождение, разбор программ и ответы на вопросы.",
-                f"",
-                f"📩 Для получения информации:",
-                f"<b>{CONTACT}</b>",
-            ]
-            return "\n".join(lines)
+            return (
+                "🩺 <b>Индивидуальная консультация</b>\n\n"
+                "Персональное сопровождение, разбор программ "
+                "и ответы на вопросы.\n\n"
+                f"📩 Для получения информации: <b>{CONTACT}</b>"
+            )
 
         emoji = CATEGORY_EMOJI.get(self.category, "📦")
-        lines = [
-            f"{emoji} <b>{self.name}</b>",
-            f"",
-            f"📂 <b>Категория:</b> {self.category}",
-            f"⚗️ <b>Дозировка:</b> {self.dosage}",
-            f"💰 <b>Цена:</b> {self.price_formatted}",
-            f"{self.stock_label}",
-            f"",
-            f"📞 Вопросы: <b>{CONTACT}</b>",
-        ]
-        return "\n".join(lines)
+        return (
+            f"{emoji} <b>{self.name}</b>\n\n"
+            f"📂 <b>Категория:</b> {self.category}\n"
+            f"⚗️ <b>Дозировка:</b> {self.dosage}\n"
+            f"💰 <b>Цена:</b> {self.price_formatted}\n"
+            f"{self.stock_label}\n\n"
+            f"Для заказа нажмите кнопку ниже."
+        )
 
     @classmethod
     def from_row(cls, row: list) -> Optional["Product"]:
@@ -87,14 +101,14 @@ class Product:
                 row.append("")
 
             product_id = int(str(row[0]).strip())
-            category = str(row[1]).strip()
-            name = str(row[2]).strip()
-            dosage = str(row[3]).strip()
-            price_raw = str(row[4]).strip().replace(" ", "").replace(",", "")
-            price = int(price_raw) if price_raw.isdigit() else 0
-            stock_raw = str(row[5]).strip()
-            stock = int(stock_raw) if stock_raw.isdigit() else 0
-            photo_id = str(row[6]).strip()
+            category   = str(row[1]).strip()
+            name       = str(row[2]).strip()
+            dosage     = str(row[3]).strip()
+            price_raw  = str(row[4]).strip().replace(" ", "").replace(",", "")
+            price      = int(price_raw) if price_raw.isdigit() else 0
+            stock_raw  = str(row[5]).strip()
+            stock      = int(stock_raw) if stock_raw.isdigit() else 0
+            photo_id   = str(row[6]).strip()
 
             if not name or not category:
                 return None
@@ -115,13 +129,13 @@ class Product:
 @dataclass
 class OrderForm:
     """Collects user input during the order flow."""
-    product_id: int
-    product_name: str
-    user_id: int
-    username: Optional[str] = None
-    customer_name: str = ""
+    product_id:       int
+    product_name:     str
+    user_id:          int
+    username:         Optional[str] = None
+    customer_name:    str = ""
     customer_contact: str = ""
-    comment: str = ""
+    comment:          str = ""
 
     def admin_notification(self) -> str:
         username_line = f"@{self.username}" if self.username else "нет username"

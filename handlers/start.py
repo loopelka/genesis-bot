@@ -1,5 +1,6 @@
 """
 handlers/start.py — /start command and main menu navigation.
+Registers every user in users_service for broadcast functionality.
 """
 import logging
 
@@ -9,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 from keyboards import kb_main_menu
+from services.users_service import users_service
 from utils.helpers import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -24,8 +26,12 @@ WELCOME_TEXT = (
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
-    """Handle /start — clear any active FSM state and show main menu."""
+    """Handle /start — register user, clear FSM state, show main menu."""
     await state.clear()
+    await users_service.register(
+        user_id=message.from_user.id,
+        username=message.from_user.username,
+    )
     logger.info("User %d started the bot", message.from_user.id)
     await message.answer(
         text=WELCOME_TEXT,
