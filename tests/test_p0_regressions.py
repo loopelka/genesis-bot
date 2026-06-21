@@ -5,7 +5,7 @@ Run from project root:  python -m pytest tests/ -v
 
 Covers:
   P0-1  order:cancel routing
-  P0-2  oversell guard (stock_allows)
+  P0-2  oversell intentionally NOT enforced (stock unused — project decision)
   P0-3  HTML escaping of user input
   P0-4  atomic JSON writes + non-destructive corrupt-load
   P0-5  PII data files are no longer git-tracked
@@ -61,20 +61,16 @@ def test_p0_1_no_broken_eq_filter_in_source():
 
 
 # ── P0-2 · oversell guard ─────────────────────────────────────────────────────
-
-def test_p0_2_stock_allows_predicate():
-    from utils.helpers import stock_allows
-    assert stock_allows(0, 1) is True       # first add into stock-1
-    assert stock_allows(1, 1) is False      # cannot exceed stock-1
-    assert stock_allows(2, 3) is True       # 2 -> 3 within stock-3
-    assert stock_allows(3, 3) is False      # already at stock-3
-    assert stock_allows(0, 5, add=5) is True
-    assert stock_allows(0, 4, add=5) is False  # checkout line qty 5 > stock 4
+# Removed: stock quantities are intentionally NOT used in this project, so there
+# is deliberately no oversell guard. (Project decision.)
 
 
-def test_p0_2_handlers_enforce_stock():
-    src = (ROOT / "handlers" / "cart.py").read_text(encoding="utf-8")
-    assert "stock_allows" in src, "cart handlers must call the oversell guard"
+def test_p0_2_no_oversell_guard_present():
+    """Confirm the oversell logic stays removed (stock is not enforced)."""
+    cart_src = (ROOT / "handlers" / "cart.py").read_text(encoding="utf-8")
+    helpers_src = (ROOT / "utils" / "helpers.py").read_text(encoding="utf-8")
+    assert "stock_allows" not in cart_src
+    assert "stock_allows" not in helpers_src
 
 
 # ── P0-3 · HTML escaping ──────────────────────────────────────────────────────
