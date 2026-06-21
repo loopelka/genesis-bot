@@ -55,3 +55,12 @@ __pycache__/
 *.pyo
 .pythonlibs/
 *.log
+
+# Runtime data (contains customer PII — must NOT be tracked)
+users.json
+carts.json
+*.json.tmp
+*.json.corrupt.*
+
+# Local audit artifacts (kept local, not version-controlled)
+docs/audits/

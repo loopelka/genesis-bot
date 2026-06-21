@@ -12,6 +12,8 @@ Public interface:
 import asyncio
 import json
 import logging
+import os
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,18 +36,29 @@ class UsersService:
                 data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
                 self._users = {int(k): v for k, v in data.items()}
             except Exception as e:
+                # Never silently discard data: back up the corrupt file so it
+                # can be recovered, instead of overwriting it with {} on save.
                 logger.warning("Could not load users.json: %s", e)
+                try:
+                    backup = Path(f"{USERS_FILE}.corrupt.{int(time.time())}")
+                    USERS_FILE.replace(backup)
+                    logger.error("Backed up corrupt users.json to %s", backup)
+                except Exception as backup_err:
+                    logger.error("Could not back up corrupt users.json: %s", backup_err)
                 self._users = {}
         else:
             self._users = {}
         self._loaded = True
 
     def _save_sync(self) -> None:
+        # Atomic write: write to a temp file in the same dir, then os.replace.
         try:
-            USERS_FILE.write_text(
+            tmp = Path(f"{USERS_FILE}.tmp")
+            tmp.write_text(
                 json.dumps(self._users, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+            os.replace(tmp, USERS_FILE)
         except Exception as e:
             logger.error("Could not save users.json: %s", e)
 

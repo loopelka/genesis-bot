@@ -1,6 +1,7 @@
 """
 services/models.py — Domain models for Genesis Peptide Store.
 """
+import html
 from dataclasses import dataclass
 from typing import Optional
 
@@ -135,13 +136,17 @@ class OrderForm:
     comment:          str = ""
 
     def admin_notification(self) -> str:
-        username_line = f"@{self.username}" if self.username else "нет username"
+        # Escape all free-text fields — they are user-supplied and the message
+        # is sent with HTML parse mode (unescaped '<' would break delivery).
+        username_line = (
+            f"@{html.escape(self.username)}" if self.username else "нет username"
+        )
         return (
             f"🛒 <b>НОВЫЙ ЗАКАЗ</b>\n\n"
             f"🆔 ID товара: <code>{self.product_id}</code>\n"
-            f"📦 Товар: <b>{self.product_name}</b>\n\n"
-            f"👤 Покупатель: {self.customer_name}\n"
-            f"📬 Контакт: {self.customer_contact}\n"
+            f"📦 Товар: <b>{html.escape(self.product_name)}</b>\n\n"
+            f"👤 Покупатель: {html.escape(self.customer_name)}\n"
+            f"📬 Контакт: {html.escape(self.customer_contact)}\n"
             f"🔗 Telegram: {username_line} (ID: <code>{self.user_id}</code>)\n"
-            f"💬 Комментарий: {self.comment or '—'}"
+            f"💬 Комментарий: {html.escape(self.comment) if self.comment else '—'}"
         )

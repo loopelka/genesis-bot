@@ -23,6 +23,7 @@ from keyboards import (
     kb_back_to_main,
 )
 from services import products_service
+from services.descriptions_service import descriptions_service
 from services.models import CATEGORY_EMOJI, CONTACT, CONTACT_URL
 from utils.helpers import safe_edit_message, safe_send_photo
 
@@ -212,6 +213,16 @@ async def _send_product_card(callback: CallbackQuery, product, bot: Bot) -> None
         in_stock=product.in_stock,
     )
     card_text = product.card_text()
+
+    # Optional description block (short_description, key_points, research_areas),
+    # looked up strictly by product_id. If absent, the card is shown unchanged.
+    block = descriptions_service.render_block(product.product_id)
+    if block:
+        cta = "Для заказа нажмите кнопку ниже."
+        if cta in card_text:
+            card_text = card_text.replace(cta, f"{block}\n\n{cta}")
+        else:
+            card_text = f"{card_text}\n\n{block}"
 
     if product.photo_id:
         sent = await safe_send_photo(

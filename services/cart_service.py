@@ -11,6 +11,8 @@ time to guarantee price and stock accuracy.
 import asyncio
 import json
 import logging
+import os
+import time
 from pathlib import Path
 from typing import Dict
 
@@ -36,18 +38,29 @@ class CartService:
                     for uid, items in data.items()
                 }
             except Exception as e:
+                # Never silently discard data: back up the corrupt file so it
+                # can be recovered, instead of overwriting it with {} on save.
                 logger.warning("Could not load carts.json: %s", e)
+                try:
+                    backup = Path(f"{CARTS_FILE}.corrupt.{int(time.time())}")
+                    CARTS_FILE.replace(backup)
+                    logger.error("Backed up corrupt carts.json to %s", backup)
+                except Exception as backup_err:
+                    logger.error("Could not back up corrupt carts.json: %s", backup_err)
                 self._carts = {}
         else:
             self._carts = {}
         self._loaded = True
 
     def _save_sync(self) -> None:
+        # Atomic write: write to a temp file in the same dir, then os.replace.
         try:
-            CARTS_FILE.write_text(
+            tmp = Path(f"{CARTS_FILE}.tmp")
+            tmp.write_text(
                 json.dumps(self._carts, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+            os.replace(tmp, CARTS_FILE)
         except Exception as e:
             logger.error("Could not save carts.json: %s", e)
 

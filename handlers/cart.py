@@ -14,6 +14,7 @@ callback_data used (all prefixed cart: — no conflicts with existing handlers):
     cart:confirm           — final order confirmation
     cart:cancel_checkout   — abort checkout, return to cart view
 """
+import html
 import logging
 
 from aiogram import Router, F, Bot
@@ -413,20 +414,33 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
     comment = data.get("customer_comment", "") or "—"
 
     item_lines = "\n".join(
-        f"{p.name} {p.dosage} × {qty}" for p, qty in resolved
+        f"{html.escape(p.name)} {html.escape(p.dosage)} × {qty}" for p, qty in resolved
     )
 
+    # Escape all user-supplied fields — message is sent with HTML parse mode.
     admin_text = (
         f"🛒 <b>Новый заказ</b>\n\n"
-        f"Клиент: {data.get('customer_name', '—')}\n"
-        f"Связь: {data.get('customer_contact', '—')}\n"
-        f"Страна: {data.get('customer_country', '—')}\n\n"
+        f"Клиент: {html.escape(data.get('customer_name', '—'))}\n"
+        f"Связь: {html.escape(data.get('customer_contact', '—'))}\n"
+        f"Страна: {html.escape(data.get('customer_country', '—'))}\n\n"
         f"{item_lines}\n\n"
         f"Итого: <b>{_fmt_price(total)}</b>\n\n"
-        f"Комментарий:\n{comment}"
+        f"Комментарий:\n{html.escape(comment)}"
     )
 
-    await safe_send_message(bot=bot, chat_id=settings.admin_id, text=admin_text)
+    sent = await safe_send_message(bot=bot, chat_id=settings.admin_id, text=admin_text)
+    if not sent:
+        # Delivery failed — preserve cart and state so the user can retry.
+        logger.error("Cart order delivery FAILED for user=%d; cart preserved", user_id)
+        await safe_edit_message(
+            callback.message,
+            text=(
+                "❌ <b>Не удалось отправить заказ менеджеру.</b>\n\n"
+                "Корзина сохранена. Попробуйте подтвердить ещё раз."
+            ),
+            reply_markup=kb_cart_confirm(),
+        )
+        return
 
     await cart_service.clear(user_id)
     await state.clear()

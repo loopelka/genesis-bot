@@ -46,6 +46,11 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
+    # Load optional product descriptions (products_descriptions.json) at startup.
+    # Safe no-op if the file is missing — cards render without descriptions.
+    from services.descriptions_service import descriptions_service
+    descriptions_service.load()
+
     # MemoryStorage is sufficient for single-process deployment on Replit.
     # For multi-process/horizontal scaling, switch to RedisStorage.
     storage = MemoryStorage()
