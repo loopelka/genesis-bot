@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -63,6 +64,13 @@ class JsonFileStorage(BaseStorage):
                 self._data = {}
         else:
             self._data = {}
+        # Backwards compatibility: entries written before TTL support lack a
+        # timestamp. Give them a fresh lease on load so the upgrade never evicts
+        # a checkout that is currently in progress.
+        now = time.time()
+        for entry in self._data.values():
+            if isinstance(entry, dict) and "ts" not in entry:
+                entry["ts"] = now
         self._loaded = True
 
     def _save_sync(self) -> None:
@@ -96,11 +104,13 @@ class JsonFileStorage(BaseStorage):
             await self._ensure_loaded()
             k = _key_str(key)
             if k not in self._data:
-                self._data[k] = {"state": None, "data": {}}
+                self._data[k] = {"state": None, "data": {}, "ts": time.time()}
             self._data[k]["state"] = state.state if state is not None else None
             # Prune fully-cleared entries to keep the file small
             if self._data[k]["state"] is None and not self._data[k]["data"]:
                 del self._data[k]
+            else:
+                self._data[k]["ts"] = time.time()   # refresh idle timer on activity
             await self._flush()
 
     async def get_state(self, key: StorageKey) -> Optional[str]:
@@ -113,17 +123,45 @@ class JsonFileStorage(BaseStorage):
             await self._ensure_loaded()
             k = _key_str(key)
             if k not in self._data:
-                self._data[k] = {"state": None, "data": {}}
+                self._data[k] = {"state": None, "data": {}, "ts": time.time()}
             self._data[k]["data"] = data
             # Prune fully-cleared entries
             if self._data[k]["state"] is None and not self._data[k]["data"]:
                 del self._data[k]
+            else:
+                self._data[k]["ts"] = time.time()   # refresh idle timer on activity
             await self._flush()
 
     async def get_data(self, key: StorageKey) -> Dict[str, Any]:
         async with self._lock:
             await self._ensure_loaded()
             return dict(self._data.get(_key_str(key), {}).get("data", {}))
+
+    async def cleanup(self, ttl_seconds: int) -> int:
+        """
+        Prune sessions idle longer than ttl_seconds (caps PII retention for
+        abandoned checkouts). The idle timer is refreshed on every state/data
+        write, so a checkout in active progress is never evicted within the TTL.
+        Returns the number of sessions removed. A ttl_seconds <= 0 disables it.
+        """
+        if ttl_seconds <= 0:
+            return 0
+        async with self._lock:
+            await self._ensure_loaded()
+            now = time.time()
+            stale = [
+                k for k, v in self._data.items()
+                if now - float(v.get("ts", 0)) > ttl_seconds
+            ]
+            for k in stale:
+                del self._data[k]
+            if stale:
+                await self._flush()
+                logger.info(
+                    "FSM cleanup: pruned %d abandoned session(s) idle > %ds",
+                    len(stale), ttl_seconds,
+                )
+            return len(stale)
 
     async def close(self) -> None:
         async with self._lock:
