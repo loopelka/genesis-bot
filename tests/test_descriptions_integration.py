@@ -48,14 +48,14 @@ def test_name_mapping_covers_all_47_drugs():
 
 # ── product card ──────────────────────────────────────────────────────────────
 
-def test_product_card_includes_description_and_related():
+def test_product_card_includes_description_and_related(monkeypatch):
     import handlers.catalog as cat
     from services import products_service
 
     captured = {}
     async def fake_edit(message, text, reply_markup=None, **k):
         captured["text"] = text; return True
-    cat.safe_edit_message = fake_edit
+    monkeypatch.setattr(cat, "safe_edit_message", fake_edit)
 
     product = run(products_service.get_product_by_id(1))   # Semaglutide
     cb = MagicMock(); cb.message = MagicMock(); cb.message.chat.id = 1
@@ -70,14 +70,14 @@ def test_product_card_includes_description_and_related():
     assert t.index("Основные эффекты") < t.index("Для заказа нажмите кнопку ниже.")
 
 
-def test_product_card_fallback_without_description():
+def test_product_card_fallback_without_description(monkeypatch):
     import handlers.catalog as cat
     from services.models import Product
 
     captured = {}
     async def fake_edit(message, text, reply_markup=None, **k):
         captured["text"] = text; return True
-    cat.safe_edit_message = fake_edit
+    monkeypatch.setattr(cat, "safe_edit_message", fake_edit)
 
     ghost = Product(product_id=99999, category="Контроль веса", name="GhostPeptide",
                     dosage="10 мг", price=1000, stock=5, photo_id="")
@@ -91,12 +91,12 @@ def test_product_card_fallback_without_description():
 
 # ── catalog navigation ────────────────────────────────────────────────────────
 
-def test_catalog_screens_render():
+def test_catalog_screens_render(monkeypatch):
     import handlers.catalog as cat
     captured = {}
     async def fake_edit(message, text, reply_markup=None, **k):
         captured["text"] = text; return True
-    cat.safe_edit_message = fake_edit
+    monkeypatch.setattr(cat, "safe_edit_message", fake_edit)
 
     cb = MagicMock(); cb.message = MagicMock(); cb.answer = AsyncMock()
     run(cat.cb_show_catalog(cb))
@@ -108,7 +108,7 @@ def test_catalog_screens_render():
 
 # ── cart checkout → admin notification (unchanged logic) ──────────────────────
 
-def _run_confirm(send_ok):
+def _run_confirm(send_ok, monkeypatch):
     import handlers.cart as cart
 
     class FakeCartSvc:
@@ -121,34 +121,51 @@ def _run_confirm(send_ok):
             s._d = {"customer_name": "Иван", "customer_contact": "@user",
                     "customer_country": "DE", "customer_comment": "DHL"}
         async def get_data(s): return dict(s._d)
+        async def update_data(s, **kw): s._d.update(kw); return dict(s._d)
         async def clear(s): s.cleared = True
+    class FakeOrders:
+        def __init__(s): s.created = []; s.notified = []; s.failed = []
+        async def create(s, **kw): s.created.append(kw); return "000001"
+        async def mark_notified(s, oid): s.notified.append(oid)
+        async def mark_notify_failed(s, oid): s.failed.append(oid)
 
-    fcs = FakeCartSvc(); fst = FakeState()
-    cart.cart_service = fcs
+    fcs = FakeCartSvc(); fst = FakeState(); fo = FakeOrders()
+    # monkeypatch.setattr auto-restores, so these stubs never leak to other tests.
+    monkeypatch.setattr(cart, "cart_service", fcs)
+    monkeypatch.setattr(cart, "orders_service", fo)
     prod = MagicMock(); prod.name = "Semaglutide"; prod.dosage = "5 мг"
     prod.price = 2100; prod.stock = 10
-    cart.products_service.get_product_by_id = AsyncMock(return_value=prod)
+    monkeypatch.setattr(cart.products_service, "get_product_by_id",
+                        AsyncMock(return_value=prod))
     sent = MagicMock() if send_ok else None
-    cart.safe_send_message = AsyncMock(return_value=sent)
+    send_mock = AsyncMock(return_value=sent)
+    monkeypatch.setattr(cart, "safe_send_message", send_mock)
     captured = {}
     async def fake_edit(message, text, reply_markup=None, **k):
         captured["text"] = text; return True
-    cart.safe_edit_message = fake_edit
+    monkeypatch.setattr(cart, "safe_edit_message", fake_edit)
 
-    cb = MagicMock(); cb.from_user.id = 200; cb.message = MagicMock(); cb.answer = AsyncMock()
+    cb = MagicMock(); cb.from_user.id = 200; cb.from_user.username = "user"
+    cb.message = MagicMock(); cb.answer = AsyncMock()
     run(cart.cb_cart_confirm(cb, fst, bot=MagicMock()))
-    admin_text = cart.safe_send_message.call_args.kwargs.get("text", "") if send_ok else ""
-    return fcs.cleared, fst.cleared, captured["text"], admin_text
+    admin_text = send_mock.call_args.kwargs.get("text", "") if send_ok else ""
+    return fcs.cleared, fst.cleared, captured["text"], admin_text, fo
 
 
-def test_checkout_success_sends_admin_notification():
-    cart_cleared, state_cleared, user_msg, admin_text = _run_confirm(send_ok=True)
+def test_checkout_success_sends_admin_notification(monkeypatch):
+    cart_cleared, state_cleared, user_msg, admin_text, fo = _run_confirm(
+        send_ok=True, monkeypatch=monkeypatch)
     assert cart_cleared and state_cleared
     assert "Заказ оформлен" in user_msg
     assert "Новый заказ" in admin_text and "Semaglutide" in admin_text
+    # Order persisted before the DM, then marked notified.
+    assert len(fo.created) == 1 and fo.notified == ["000001"]
 
 
-def test_checkout_failure_preserves_cart_and_state():
-    cart_cleared, state_cleared, user_msg, _ = _run_confirm(send_ok=False)
+def test_checkout_failure_preserves_cart_and_state(monkeypatch):
+    cart_cleared, state_cleared, user_msg, _, fo = _run_confirm(
+        send_ok=False, monkeypatch=monkeypatch)
     assert not cart_cleared and not state_cleared
     assert "Не удалось отправить заказ" in user_msg
+    # Order still persisted, marked notify_failed (not lost).
+    assert len(fo.created) == 1 and fo.failed == ["000001"]

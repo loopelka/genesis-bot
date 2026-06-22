@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, Message
 
 from config import settings
 from keyboards import kb_cancel_order, kb_order_confirm, kb_back_to_main, kb_main_menu
-from services import products_service
+from services import products_service, orders_service
 from services.models import OrderForm
 from utils import OrderStates
 from utils.helpers import safe_send_message, safe_edit_message
@@ -184,6 +184,33 @@ async def cb_confirm_order(callback: CallbackQuery, state: FSMContext, bot: Bot)
         comment=data.get("comment", ""),
     )
 
+    # Persist the order BEFORE notifying the admin, so a failed Telegram
+    # delivery never loses it (P0-1/P0-2). Idempotent across retries: the id is
+    # stored in FSM state, so pressing "confirm" again re-sends without
+    # creating a duplicate record.
+    order_id = data.get("order_id")
+    if not order_id:
+        product = await products_service.get_product_by_id(data["product_id"])
+        item = {
+            "product_id": data["product_id"],
+            "name": data["product_name"],
+            "dosage": product.dosage if product else "",
+            "price": product.price if product else 0,
+            "qty": 1,
+        }
+        total = product.price if product else 0
+        order_id = await orders_service.create(
+            user_id=data["user_id"],
+            username=data.get("username"),
+            customer_name=data["customer_name"],
+            customer_contact=data["customer_contact"],
+            items=[item],
+            total=total,
+            comment=data.get("comment", ""),
+            source="single",
+        )
+        await state.update_data(order_id=order_id)
+
     # Notify admin
     admin_sent = await safe_send_message(
         bot=bot,
@@ -191,7 +218,9 @@ async def cb_confirm_order(callback: CallbackQuery, state: FSMContext, bot: Bot)
         text=order.admin_notification(),
     )
     if not admin_sent:
-        # Do NOT clear state/confirm success — the order was not delivered.
+        # Order is already persisted; record the failed delivery and keep state
+        # (with order_id) so the user can retry without duplicating the order.
+        await orders_service.mark_notify_failed(order_id)
         logger.error("Failed to deliver order notification to admin %d", settings.admin_id)
         await safe_edit_message(
             message=callback.message,
@@ -204,6 +233,7 @@ async def cb_confirm_order(callback: CallbackQuery, state: FSMContext, bot: Bot)
         return
 
     # Thank the user
+    await orders_service.mark_notified(order_id)
     await state.clear()
     await safe_edit_message(
         message=callback.message,
