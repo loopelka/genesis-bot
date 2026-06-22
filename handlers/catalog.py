@@ -10,6 +10,7 @@ Navigation flow:
     drug:{category}:{name}  → dosage list (or direct card if only 1 variant)
     prod:{product_id}       → full product card
 """
+import html
 import logging
 
 from aiogram import Router, F, Bot
@@ -24,6 +25,7 @@ from keyboards import (
 )
 from services import products_service
 from services.descriptions_service import descriptions_service
+from services.related_service import related_service
 from services.models import CATEGORY_EMOJI, CONTACT, CONTACT_URL
 from utils.helpers import safe_edit_message, safe_send_photo
 
@@ -214,15 +216,27 @@ async def _send_product_card(callback: CallbackQuery, product, bot: Bot) -> None
     )
     card_text = product.card_text()
 
-    # Optional description block (short_description, key_points, research_areas),
-    # looked up strictly by product_id. If absent, the card is shown unchanged.
-    block = descriptions_service.render_block(product.product_id)
+    # Description block (short_description + main effects), looked up by drug
+    # name first (then product_id). Related products appended after it.
+    # If nothing matches, the card is shown unchanged (graceful fallback).
+    block = descriptions_service.render_block(
+        name=product.name, product_id=product.product_id
+    )
+    related = related_service.get_related(product.name)
+    extra_parts = []
     if block:
+        extra_parts.append(block)
+    if related:
+        extra_parts.append(
+            "🔗 <b>С этим товаром смотрят:</b> " + ", ".join(html.escape(r) for r in related)
+        )
+    if extra_parts:
+        extra = "\n\n".join(extra_parts)
         cta = "Для заказа нажмите кнопку ниже."
         if cta in card_text:
-            card_text = card_text.replace(cta, f"{block}\n\n{cta}")
+            card_text = card_text.replace(cta, f"{extra}\n\n{cta}")
         else:
-            card_text = f"{card_text}\n\n{block}"
+            card_text = f"{card_text}\n\n{extra}"
 
     if product.photo_id:
         sent = await safe_send_photo(

@@ -1,0 +1,278 @@
+{
+  "Semaglutide": [
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide",
+    "Cagri+Sema (5+5 мг)"
+  ],
+  "Tirzepatide": [
+    "Semaglutide",
+    "Retatrutide",
+    "Cagrilintide",
+    "Cagri+Sema (5+5 мг)"
+  ],
+  "Retatrutide": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Cagrilintide",
+    "Cagri+Sema (5+5 мг)"
+  ],
+  "Cagrilintide": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagri+Sema (5+5 мг)"
+  ],
+  "MT-1 (Melanotan 1)": [
+    "MT-2 (Melanotan 2)",
+    "GHK-CU",
+    "Snap 8",
+    "AHK-CU"
+  ],
+  "MT-2 (Melanotan 2)": [
+    "MT-1 (Melanotan 1)",
+    "GHK-CU",
+    "Snap 8",
+    "AHK-CU"
+  ],
+  "HGH 191AA": [
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)",
+    "IGF-1 LR3"
+  ],
+  "GLOW (TB10+BPC10+GHK50)": [
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "TB 500",
+    "BPC+TB (5+5 мг)"
+  ],
+  "KLOW (+KPV10)": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "BPC 157",
+    "TB 500",
+    "BPC+TB (5+5 мг)"
+  ],
+  "BPC 157": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "TB 500",
+    "BPC+TB (5+5 мг)"
+  ],
+  "TB 500": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "BPC+TB (5+5 мг)"
+  ],
+  "BPC+TB (5+5 мг)": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "TB 500"
+  ],
+  "BPC+TB (10+10 мг)": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "TB 500"
+  ],
+  "NAD+": [
+    "PT-141",
+    "Oxytocin",
+    "Epithalon",
+    "SS-31"
+  ],
+  "Cagri+Sema (5+5 мг)": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide"
+  ],
+  "Cagri+Sema (2.5+2.5 мг)": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide"
+  ],
+  "PT-141": [
+    "NAD+",
+    "Oxytocin",
+    "Epithalon",
+    "SS-31"
+  ],
+  "DSIP": [
+    "Selank",
+    "Semax",
+    "Melatonin",
+    "VIP"
+  ],
+  "GHK-CU": [
+    "MT-1 (Melanotan 1)",
+    "MT-2 (Melanotan 2)",
+    "Snap 8",
+    "AHK-CU"
+  ],
+  "CJC-1295 без DAC": [
+    "HGH 191AA",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)",
+    "IGF-1 LR3"
+  ],
+  "CJC-1295 с DAC": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 без DAC + IPA (5+5)",
+    "IGF-1 LR3"
+  ],
+  "CJC-1295 без DAC + IPA (5+5)": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "IGF-1 LR3"
+  ],
+  "AOD9604": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide"
+  ],
+  "Selank": [
+    "DSIP",
+    "Semax",
+    "Melatonin",
+    "VIP"
+  ],
+  "Semax": [
+    "DSIP",
+    "Selank",
+    "Melatonin",
+    "VIP"
+  ],
+  "Oxytocin": [
+    "NAD+",
+    "PT-141",
+    "Epithalon",
+    "SS-31"
+  ],
+  "5-amino-1mq": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide"
+  ],
+  "Epithalon": [
+    "NAD+",
+    "PT-141",
+    "Oxytocin",
+    "SS-31"
+  ],
+  "Adipotide": [
+    "Semaglutide",
+    "Tirzepatide",
+    "Retatrutide",
+    "Cagrilintide"
+  ],
+  "Snap 8": [
+    "MT-1 (Melanotan 1)",
+    "MT-2 (Melanotan 2)",
+    "GHK-CU",
+    "AHK-CU"
+  ],
+  "SS-31": [
+    "NAD+",
+    "PT-141",
+    "Oxytocin",
+    "Epithalon"
+  ],
+  "IGF-1 LR3": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "TSM": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "IP": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "Ara-290": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "TB 500"
+  ],
+  "MOTS-C": [
+    "NAD+",
+    "PT-141",
+    "Oxytocin",
+    "Epithalon"
+  ],
+  "Melatonin": [
+    "DSIP",
+    "Selank",
+    "Semax",
+    "VIP"
+  ],
+  "KPV": [
+    "GLOW (TB10+BPC10+GHK50)",
+    "KLOW (+KPV10)",
+    "BPC 157",
+    "TB 500"
+  ],
+  "VIP": [
+    "DSIP",
+    "Selank",
+    "Semax",
+    "Melatonin"
+  ],
+  "Bac water": [
+    "Sterile water"
+  ],
+  "Sterile water": [
+    "Bac water"
+  ],
+  "AHK-CU": [
+    "MT-1 (Melanotan 1)",
+    "MT-2 (Melanotan 2)",
+    "GHK-CU",
+    "Snap 8"
+  ],
+  "Cerbrosylsin": [
+    "DSIP",
+    "Selank",
+    "Semax",
+    "Melatonin"
+  ],
+  "GHRP-2": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "GHRP-6": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "HCG": [
+    "HGH 191AA",
+    "CJC-1295 без DAC",
+    "CJC-1295 с DAC",
+    "CJC-1295 без DAC + IPA (5+5)"
+  ],
+  "Botulinum toxin": [
+    "MT-1 (Melanotan 1)",
+    "MT-2 (Melanotan 2)",
+    "GHK-CU",
+    "Snap 8"
+  ]
+}

@@ -14,10 +14,10 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import settings
 from handlers import all_routers
+from services.fsm_storage import JsonFileStorage
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
 
@@ -46,14 +46,20 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
 
-    # Load optional product descriptions (products_descriptions.json) at startup.
-    # Safe no-op if the file is missing — cards render without descriptions.
+    # Load catalog data (descriptions + related products) at startup.
+    # Safe no-op if a file is missing — cards degrade gracefully.
     from services.descriptions_service import descriptions_service
+    from services.related_service import related_service
+    from services import products_service
     descriptions_service.load()
+    related_service.load()
+    # Cross-check descriptions against the live catalog (47 drugs ↔ 104 SKU).
+    _products = await products_service.get_all_products()
+    descriptions_service.validate_names({p.name for p in _products})
 
-    # MemoryStorage is sufficient for single-process deployment on Replit.
-    # For multi-process/horizontal scaling, switch to RedisStorage.
-    storage = MemoryStorage()
+    # Persistent FSM storage: active checkout sessions survive restarts
+    # (Replit sleep/wake, redeploy, crash). Atomic writes to fsm_state.json.
+    storage = JsonFileStorage()
     dp = Dispatcher(storage=storage)
 
     # Register all routers
@@ -74,6 +80,7 @@ async def main() -> None:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
         logger.info("Bot stopped. Closing session...")
+        await storage.close()
         await bot.session.close()
 
 

@@ -1,11 +1,7 @@
 """
-tests/test_descriptions_integration.py — Smoke tests for products_descriptions.json
-integration. Uses the real products.xlsx and products_descriptions.json; only
-Telegram I/O is mocked.
-
-Covers: descriptions loading + lookup by product_id, product card (with and
-without description), catalog rendering, and cart checkout → admin notification.
-Cart/FSM/checkout LOGIC is unchanged — these tests only confirm nothing broke.
+tests/test_descriptions_integration.py — Catalog/descriptions integration.
+Uses the real products.xlsx and products_descriptions.json; only Telegram I/O
+is mocked. Cart/FSM/checkout logic is unchanged — these confirm nothing broke.
 """
 import asyncio
 import os
@@ -19,31 +15,40 @@ def run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
-# ── descriptions service ──────────────────────────────────────────────────────
+# ── descriptions service (lookup by name primary, id fallback) ────────────────
 
-def test_load_and_lookup_by_product_id():
+def test_lookup_by_name_and_id():
     from services.descriptions_service import descriptions_service as ds
     ds.load()
-    rec = ds.get(1)                      # Semaglutide id 1
-    assert rec and rec["name"] == "Semaglutide"
-    assert ds.get(5)["name"] == "Semaglutide"   # same drug, other dosage id
-    assert ds.get(104)["name"] == "Botulinum toxin"
-    assert ds.get(99999) is None         # unknown id → None (fallback path)
+    assert ds.get_by_name("Semaglutide")["name"] == "Semaglutide"
+    assert ds.get_by_id(5)["name"] == "Semaglutide"        # other dosage SKU
+    assert ds.get_by_id(104)["name"] == "Botulinum toxin"
+    assert ds.get(name="Semaglutide")["name"] == "Semaglutide"
+    assert ds.get(product_id=99999) is None
 
 
-def test_render_block_contains_required_fields():
+def test_render_block_short_description_and_effects():
     from services.descriptions_service import descriptions_service as ds
-    block = ds.render_block(1)
+    block = ds.render_block(name="Semaglutide")
     assert block is not None
     assert "📝" in block                          # short_description
-    assert "Кратко" in block                       # key_points
-    assert "Направления исследований" in block     # research_areas
-    assert ds.render_block(99999) is None          # unknown → None
+    assert "Основные эффекты" in block             # effects (Э8)
+    assert ds.render_block(product_id=99999) is None
+
+
+def test_name_mapping_covers_all_47_drugs():
+    from services.descriptions_service import descriptions_service as ds
+    from services import products_service
+    ds.load()
+    prods = run(products_service.get_all_products())
+    res = ds.validate_names({p.name for p in prods})
+    assert res["missing_description"] == []
+    assert res["orphan_description"] == []
 
 
 # ── product card ──────────────────────────────────────────────────────────────
 
-def test_product_card_includes_description():
+def test_product_card_includes_description_and_related():
     import handlers.catalog as cat
     from services import products_service
 
@@ -52,16 +57,17 @@ def test_product_card_includes_description():
         captured["text"] = text; return True
     cat.safe_edit_message = fake_edit
 
-    product = run(products_service.get_product_by_id(1))
+    product = run(products_service.get_product_by_id(1))   # Semaglutide
     cb = MagicMock(); cb.message = MagicMock(); cb.message.chat.id = 1
     run(cat._send_product_card(cb, product, bot=MagicMock()))
 
-    assert "Semaglutide" in captured["text"]
-    assert "Направления исследований" in captured["text"]
-    assert "Для заказа нажмите кнопку ниже." in captured["text"]
-    # description block is inserted BEFORE the call-to-action
-    assert captured["text"].index("Направления исследований") < \
-           captured["text"].index("Для заказа нажмите кнопку ниже.")
+    t = captured["text"]
+    assert "Semaglutide" in t
+    assert "Основные эффекты" in t
+    assert "С этим товаром смотрят" in t
+    assert "Для заказа нажмите кнопку ниже." in t
+    # description block sits BEFORE the call-to-action
+    assert t.index("Основные эффекты") < t.index("Для заказа нажмите кнопку ниже.")
 
 
 def test_product_card_fallback_without_description():
@@ -78,9 +84,9 @@ def test_product_card_fallback_without_description():
     cb = MagicMock(); cb.message = MagicMock(); cb.message.chat.id = 1
     run(cat._send_product_card(cb, ghost, bot=MagicMock()))
 
-    # No description for this id → card equals plain card_text(), no error
+    # No description / no related → card equals plain card_text(), no error
     assert captured["text"] == ghost.card_text()
-    assert "Направления исследований" not in captured["text"]
+    assert "Основные эффекты" not in captured["text"]
 
 
 # ── catalog navigation ────────────────────────────────────────────────────────
