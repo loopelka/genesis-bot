@@ -1,10 +1,8 @@
 from .builders import (
     kb_main_menu,
     kb_goals,
-    kb_categories,
     kb_drug_list,
     kb_dosage_list,
-    kb_product_list,
     kb_product_card,
     kb_cancel_order,
     kb_order_confirm,
@@ -23,10 +21,8 @@ from .builders import (
 __all__ = [
     "kb_main_menu",
     "kb_goals",
-    "kb_categories",
     "kb_drug_list",
     "kb_dosage_list",
-    "kb_product_list",
     "kb_product_card",
     "kb_cancel_order",
     "kb_order_confirm",

@@ -137,10 +137,5 @@ class CartService:
         items = await self.get_items(user_id)
         return len(items) == 0
 
-    async def item_count(self, user_id: int) -> int:
-        """Total qty across all items."""
-        items = await self.get_items(user_id)
-        return sum(items.values())
-
 
 cart_service = CartService()

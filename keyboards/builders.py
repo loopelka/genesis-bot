@@ -8,7 +8,7 @@ from typing import List, Optional
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from services.models import Product, ALL_CATEGORIES, CATEGORY_EMOJI, CONTACT_URL
+from services.models import Product, CONTACT_URL
 
 
 def _fmt_price(amount: int) -> str:
@@ -54,22 +54,6 @@ def kb_goals() -> InlineKeyboardMarkup:
     ]
     for text, cb in rows:
         builder.button(text=text, callback_data=cb)
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-# ── Catalog: category list ────────────────────────────────────────────────────
-
-def kb_categories(available_categories: List[str]) -> InlineKeyboardMarkup:
-    """Show every category that has products, skip empty ones."""
-    builder = InlineKeyboardBuilder()
-    for category in ALL_CATEGORIES:
-        emoji = CATEGORY_EMOJI.get(category, "📦")
-        if category in available_categories:
-            builder.button(text=f"{emoji} {category}", callback_data=f"cat:{category}")
-        else:
-            builder.button(text=f"⏳ {category} (скоро)", callback_data="noop")
-    builder.button(text="⬅️ К разделам", callback_data="menu:catalog")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -258,35 +242,4 @@ def kb_price_list() -> InlineKeyboardMarkup:
     builder.button(text="📦 Открыть каталог", callback_data="menu:catalog")
     builder.button(text="⬅️ Главное меню",   callback_data="menu:main")
     builder.adjust(1)
-    return builder.as_markup()
-
-
-# ── Product list (flat, backward-compat) ──────────────────────────────────────
-
-def kb_product_list(products: List[Product], category: str, page: int = 0) -> InlineKeyboardMarkup:
-    """Paginated flat product list — kept for backward compatibility."""
-    PAGE_SIZE   = 8
-    start       = page * PAGE_SIZE
-    end         = start + PAGE_SIZE
-    page_prods  = products[start:end]
-    total_pages = (len(products) + PAGE_SIZE - 1) // PAGE_SIZE
-
-    builder = InlineKeyboardBuilder()
-    for p in page_prods:
-        icon  = "✅" if p.in_stock else "❌"
-        label = f"{icon} {p.name} {p.dosage}"
-        builder.button(text=label, callback_data=f"prod:{p.product_id}")
-    builder.adjust(1)
-
-    nav = []
-    if page > 0:
-        nav.append(InlineKeyboardButton(text="◀️ Назад",  callback_data=f"page:{category}:{page - 1}"))
-    if page < total_pages - 1:
-        nav.append(InlineKeyboardButton(text="▶️ Далее", callback_data=f"page:{category}:{page + 1}"))
-    if nav:
-        builder.row(*nav)
-    if total_pages > 1:
-        builder.row(InlineKeyboardButton(text=f"📄 {page + 1} / {total_pages}", callback_data="noop"))
-
-    builder.row(InlineKeyboardButton(text="⬅️ К разделам", callback_data="menu:catalog"))
     return builder.as_markup()

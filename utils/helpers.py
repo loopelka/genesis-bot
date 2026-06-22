@@ -82,17 +82,3 @@ async def safe_edit_message(
     except Exception as e:
         logger.exception("Unexpected error editing message: %s", e)
     return False
-
-
-def user_mention(user_id: int, username: Optional[str], name: str) -> str:
-    """Return a formatted user mention for admin notifications."""
-    if username:
-        return f"@{username} (<code>{user_id}</code>)"
-    return f"{name} (<code>{user_id}</code>)"
-
-
-def truncate(text: str, max_length: int = 100) -> str:
-    """Truncate text to max_length characters."""
-    if len(text) <= max_length:
-        return text
-    return text[: max_length - 3] + "..."

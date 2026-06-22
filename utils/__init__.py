@@ -3,8 +3,6 @@ from .helpers import (
     safe_send_message,
     safe_send_photo,
     safe_edit_message,
-    user_mention,
-    truncate,
 )
 
 __all__ = [
@@ -14,6 +12,4 @@ __all__ = [
     "safe_send_message",
     "safe_send_photo",
     "safe_edit_message",
-    "user_mention",
-    "truncate",
 ]
