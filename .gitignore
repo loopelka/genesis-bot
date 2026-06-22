@@ -59,7 +59,9 @@ __pycache__/
 # Runtime data (contains customer PII — must NOT be tracked)
 users.json
 carts.json
+fsm_state.json
 *.json.tmp
+*.tmp
 *.json.corrupt.*
 
 # Local audit artifacts (kept local, not version-controlled)
