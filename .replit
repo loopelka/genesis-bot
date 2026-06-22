@@ -1,8 +1,11 @@
 modules = ["python-3.12"]
 
 [deployment]
-router = "application"
-deploymentTarget = "autoscale"
+# Reserved VM = exactly ONE always-on instance. Required for Telegram long
+# polling: autoscale could run multiple replicas, and two pollers on the same
+# BOT_TOKEN fight over getUpdates (409 Conflict) and produce inconsistent
+# behavior. Do NOT change back to "autoscale".
+deploymentTarget = "vm"
 run = ["python", "main.py"]
 
 [workflows]
