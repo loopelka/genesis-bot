@@ -97,6 +97,37 @@ def test_single_order_persists_survives_failure_and_retries(tmp_path, monkeypatc
     assert run(state.get_data()) == {}, "state cleared after success"
 
 
+def test_edit_after_failure_produces_fresh_order(tmp_path, monkeypatch):
+    orders = _fresh_orders(tmp_path, monkeypatch)
+    from handlers import order as order_h
+
+    state = _state(tmp_path, uid=22)
+    run(state.update_data(
+        product_id=1, product_name="Semaglutide", user_id=22, username="ivan",
+        customer_name="Иван", customer_contact="@ivan", comment="",
+    ))
+    cb = _callback(uid=22)
+    bot = MagicMock()
+    bot.send_message = AsyncMock(side_effect=Exception("down"))
+
+    # Confirm fails → order persisted, order_id retained.
+    run(order_h.cb_confirm_order(cb, state, bot))
+    first_id = run(orders.get_all())[0]["id"]
+    assert (run(state.get_data())).get("order_id") == first_id
+
+    # User edits details → order_id must be dropped so a fresh record is created.
+    run(order_h.cb_edit_order(cb, state))
+    assert (run(state.get_data())).get("order_id") in (None, "")
+
+    # Re-confirm (now succeeds) → a NEW order, old failed one kept for audit.
+    bot.send_message = AsyncMock(return_value=MagicMock())
+    run(order_h.cb_confirm_order(cb, state, bot))
+    assert run(orders.count()) == 2
+    assert run(orders.get(first_id))["status"] == "notify_failed"
+    newest = run(orders.get_all())[0]
+    assert newest["id"] != first_id and newest["status"] == "notified"
+
+
 def test_single_order_success_path(tmp_path, monkeypatch):
     orders = _fresh_orders(tmp_path, monkeypatch)
     from handlers import order as order_h

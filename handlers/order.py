@@ -266,6 +266,9 @@ async def cb_edit_order(callback: CallbackQuery, state: FSMContext) -> None:
         )
         return
 
+    # Drop any persisted order id: re-entered details must produce a fresh,
+    # accurate order record rather than re-notify against a stale snapshot.
+    await state.update_data(order_id=None)
     await state.set_state(OrderStates.waiting_name)
     await safe_edit_message(
         message=callback.message,
