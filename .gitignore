@@ -59,6 +59,7 @@ __pycache__/
 # Runtime data (contains customer PII — must NOT be tracked)
 users.json
 carts.json
+orders.json
 fsm_state.json
 *.json.tmp
 *.tmp
