@@ -35,7 +35,7 @@ from keyboards import (
     kb_checkout_contact,
     kb_checkout_skip_comment,
 )
-from services import products_service
+from services import products_service, orders_service
 from services.cart_service import cart_service
 from utils import CartCheckoutStates
 from utils.helpers import safe_edit_message, safe_send_message
@@ -417,6 +417,33 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
         f"{html.escape(p.name)} {html.escape(p.dosage)} × {qty}" for p, qty in resolved
     )
 
+    # Persist the order BEFORE notifying the admin so a failed Telegram delivery
+    # never loses it (P0-1/P0-2). Idempotent across retries via the id stored in
+    # FSM state — re-confirming re-sends without creating a duplicate record.
+    order_id = data.get("order_id")
+    if not order_id:
+        order_id = await orders_service.create(
+            user_id=user_id,
+            username=callback.from_user.username,
+            customer_name=data.get("customer_name", ""),
+            customer_contact=data.get("customer_contact", ""),
+            customer_country=data.get("customer_country", ""),
+            comment=data.get("customer_comment", ""),
+            items=[
+                {
+                    "product_id": p.product_id,
+                    "name": p.name,
+                    "dosage": p.dosage,
+                    "price": p.price,
+                    "qty": qty,
+                }
+                for p, qty in resolved
+            ],
+            total=total,
+            source="cart",
+        )
+        await state.update_data(order_id=order_id)
+
     # Escape all user-supplied fields — message is sent with HTML parse mode.
     admin_text = (
         f"🛒 <b>Новый заказ</b>\n\n"
@@ -430,7 +457,9 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
 
     sent = await safe_send_message(bot=bot, chat_id=settings.admin_id, text=admin_text)
     if not sent:
-        # Delivery failed — preserve cart and state so the user can retry.
+        # Order is already persisted; record the failed delivery and preserve
+        # cart + state (with order_id) so the user can retry without duplicating.
+        await orders_service.mark_notify_failed(order_id)
         logger.error("Cart order delivery FAILED for user=%d; cart preserved", user_id)
         await safe_edit_message(
             callback.message,
@@ -442,6 +471,7 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
         )
         return
 
+    await orders_service.mark_notified(order_id)
     await cart_service.clear(user_id)
     await state.clear()
 

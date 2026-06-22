@@ -62,6 +62,25 @@ async def main() -> None:
     storage = JsonFileStorage()
     dp = Dispatcher(storage=storage)
 
+    # Cap PII retention: prune abandoned checkout sessions once at startup and
+    # then periodically in the background. Active checkouts refresh their timer
+    # on each step, so only truly idle sessions are removed.
+    await storage.cleanup(settings.fsm_ttl)
+
+    async def _fsm_cleanup_loop() -> None:
+        while True:
+            await asyncio.sleep(settings.fsm_cleanup_interval)
+            try:
+                await storage.cleanup(settings.fsm_ttl)
+            except Exception as e:
+                logger.error("FSM cleanup loop error: %s", e)
+
+    cleanup_task = (
+        asyncio.create_task(_fsm_cleanup_loop())
+        if settings.fsm_cleanup_interval > 0
+        else None
+    )
+
     # Register all routers
     for router in all_routers:
         dp.include_router(router)
@@ -80,6 +99,8 @@ async def main() -> None:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
         logger.info("Bot stopped. Closing session...")
+        if cleanup_task is not None:
+            cleanup_task.cancel()
         await storage.close()
         await bot.session.close()
 
