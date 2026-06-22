@@ -43,9 +43,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-ORDERS_FILE = Path("orders.json")
+ORDERS_FILE = settings.data_dir / "orders.json"
 
 # Valid lifecycle states for an order.
 STATUS_NEW = "new"                       # persisted, notification not yet attempted

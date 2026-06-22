@@ -16,6 +16,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
 from config import settings
+from config.settings import migrate_legacy_data
 from handlers import all_routers
 from services.fsm_storage import JsonFileStorage
 
@@ -40,6 +41,11 @@ logger = logging.getLogger(__name__)
 
 async def main() -> None:
     logger.info("Starting Genesis Peptide Store bot...")
+
+    # One-time, non-destructive migration of legacy root state files into
+    # DATA_DIR (no-op when DATA_DIR is the project root). Must run before any
+    # service reads its file or the FSM storage is created.
+    migrate_legacy_data(settings.data_dir)
 
     bot = Bot(
         token=settings.bot_token,

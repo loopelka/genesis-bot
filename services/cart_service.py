@@ -16,9 +16,11 @@ import time
 from pathlib import Path
 from typing import Dict
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-CARTS_FILE = Path("carts.json")
+CARTS_FILE = settings.data_dir / "carts.json"
 
 
 class CartService:

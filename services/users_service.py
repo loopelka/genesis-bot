@@ -17,9 +17,11 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-USERS_FILE = Path("users.json")
+USERS_FILE = settings.data_dir / "users.json"
 
 
 class UsersService:

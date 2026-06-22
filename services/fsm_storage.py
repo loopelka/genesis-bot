@@ -24,9 +24,11 @@ from typing import Any, Dict, Optional
 
 from aiogram.fsm.storage.base import BaseStorage, StorageKey, StateType
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
-FSM_FILE = Path("fsm_state.json")
+FSM_FILE = settings.data_dir / "fsm_state.json"
 
 
 def _key_str(key: StorageKey) -> str:
