@@ -1,6 +1,6 @@
 """
 config/settings.py — Central configuration for Genesis Peptide Store bot.
-Loads from .env and provides typed access to all settings.
+Reads from environment variables (and a local .env if present, for dev).
 """
 import logging
 import os
@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Load a local .env for development. On a platform that injects environment
+# variables (e.g. JustRunMyApp), no .env exists and this is a harmless no-op —
+# values are read straight from os.environ below.
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -49,9 +52,9 @@ class Settings:
         data_dir.mkdir(parents=True, exist_ok=True)
 
         if not bot_token:
-            raise ValueError("BOT_TOKEN is not set in .env")
+            raise ValueError("BOT_TOKEN environment variable is not set")
         if not admin_id_raw or admin_id_raw == "0":
-            raise ValueError("ADMIN_ID is not set in .env")
+            raise ValueError("ADMIN_ID environment variable is not set")
 
         return cls(
             bot_token=bot_token,
