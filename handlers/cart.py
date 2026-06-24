@@ -37,8 +37,18 @@ from keyboards import (
 )
 from services import products_service, orders_service
 from services.cart_service import cart_service
+from services.promocodes_service import promocodes_service
 from utils import CartCheckoutStates
 from utils.helpers import safe_edit_message, safe_send_message
+
+
+def kb_checkout_skip_promo() -> InlineKeyboardMarkup:
+    """Promo step — skip button + cancel."""
+    b = InlineKeyboardBuilder()
+    b.button(text="➡️ Без промокода",            callback_data="cart:promo_skip")
+    b.button(text="❌ Отменить оформление",       callback_data="cart:cancel_checkout")
+    b.adjust(1)
+    return b.as_markup()
 
 logger = logging.getLogger(__name__)
 router = Router(name="cart")
@@ -314,12 +324,7 @@ async def msg_cart_country(message: Message, state: FSMContext) -> None:
 async def cb_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(customer_comment="")
     await callback.answer()
-    await _show_confirmation(
-        msg=callback.message,
-        state=state,
-        user_id=callback.from_user.id,
-        edit=True,
-    )
+    await _ask_promo(msg=callback.message, state=state, edit=True)
 
 
 # ── Checkout step 4b: comment typed ──────────────────────────────────────────
@@ -330,11 +335,46 @@ async def msg_cart_comment(message: Message, state: FSMContext) -> None:
     if comment == "-":
         comment = ""
     await state.update_data(customer_comment=comment)
+    await _ask_promo(msg=message, state=state, edit=False)
+
+
+# ── Checkout step 5: promo code (additive, optional) ──────────────────────────
+
+async def _ask_promo(msg, state: FSMContext, edit: bool) -> None:
+    await state.set_state(CartCheckoutStates.waiting_promo)
+    text = (
+        "🎁 <b>Промокод</b>\n\n"
+        "Введите промокод, если он у вас есть, или нажмите «Без промокода»:"
+    )
+    if edit:
+        await safe_edit_message(msg, text=text, reply_markup=kb_checkout_skip_promo())
+    else:
+        await msg.answer(text=text, reply_markup=kb_checkout_skip_promo(), parse_mode="HTML")
+
+
+@router.callback_query(F.data == "cart:promo_skip", CartCheckoutStates.waiting_promo)
+async def cb_promo_skip(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.update_data(promo_rec=None)
+    await callback.answer()
     await _show_confirmation(
-        msg=message,
-        state=state,
-        user_id=message.from_user.id,
-        edit=False,
+        msg=callback.message, state=state, user_id=callback.from_user.id, edit=True,
+    )
+
+
+@router.message(CartCheckoutStates.waiting_promo, F.text)
+async def msg_cart_promo(message: Message, state: FSMContext) -> None:
+    code = message.text.strip()
+    rec, reason = await promocodes_service.validate(code)
+    if rec is None:
+        await message.answer(
+            f"⚠️ {reason}. Попробуйте другой код или нажмите «Без промокода»:",
+            reply_markup=kb_checkout_skip_promo(),
+            parse_mode="HTML",
+        )
+        return
+    await state.update_data(promo_rec=rec)
+    await _show_confirmation(
+        msg=message, state=state, user_id=message.from_user.id, edit=False,
     )
 
 
@@ -361,6 +401,9 @@ async def _show_confirmation(msg, state: FSMContext, user_id: int, edit: bool) -
 
     total   = sum(p.price * qty for p, qty in resolved)
     comment = data.get("customer_comment", "") or "—"
+    rec     = data.get("promo_rec")
+    discount = promocodes_service.discount_for(rec, total) if rec else 0
+    final_total = total - discount
 
     lines = [
         "📋 <b>Проверьте данные заказа:</b>\n",
@@ -375,7 +418,11 @@ async def _show_confirmation(msg, state: FSMContext, user_id: int, edit: bool) -
             f"• {product.name} {product.dosage} × {qty}"
             f" — {_fmt_price(product.price * qty)}"
         )
-    lines.append(f"\n💰 <b>Итого: {_fmt_price(total)}</b>\n\nВсё верно?")
+    if discount > 0:
+        lines.append(f"\n🎁 Промокод <b>{rec['code']}</b>: −{_fmt_price(discount)}")
+        lines.append(f"💰 <b>Итого: {_fmt_price(final_total)}</b>\n\nВсё верно?")
+    else:
+        lines.append(f"\n💰 <b>Итого: {_fmt_price(final_total)}</b>\n\nВсё верно?")
 
     await state.set_state(CartCheckoutStates.confirming)
     text = "\n".join(lines)
@@ -410,8 +457,12 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
         if product:
             resolved.append((product, qty))
 
-    total   = sum(p.price * qty for p, qty in resolved)
+    gross   = sum(p.price * qty for p, qty in resolved)
     comment = data.get("customer_comment", "") or "—"
+    rec     = data.get("promo_rec")
+    discount = promocodes_service.discount_for(rec, gross) if rec else 0
+    total   = gross - discount
+    promo_code = rec["code"] if rec else ""
 
     item_lines = "\n".join(
         f"{html.escape(p.name)} {html.escape(p.dosage)} × {qty}" for p, qty in resolved
@@ -441,16 +492,23 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
             ],
             total=total,
             source="cart",
+            promo_code=promo_code,
+            discount=discount,
         )
         await state.update_data(order_id=order_id)
 
     # Escape all user-supplied fields — message is sent with HTML parse mode.
+    promo_line = (
+        f"Промокод: {html.escape(promo_code)} (−{_fmt_price(discount)})\n"
+        if discount > 0 else ""
+    )
     admin_text = (
         f"🛒 <b>Новый заказ</b>\n\n"
         f"Клиент: {html.escape(data.get('customer_name', '—'))}\n"
         f"Связь: {html.escape(data.get('customer_contact', '—'))}\n"
         f"Страна: {html.escape(data.get('customer_country', '—'))}\n\n"
         f"{item_lines}\n\n"
+        f"{promo_line}"
         f"Итого: <b>{_fmt_price(total)}</b>\n\n"
         f"Комментарий:\n{html.escape(comment)}"
     )
@@ -472,6 +530,8 @@ async def cb_cart_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot) 
         return
 
     await orders_service.mark_notified(order_id)
+    if promo_code:
+        await promocodes_service.redeem(promo_code)
     await cart_service.clear(user_id)
     await state.clear()
 

@@ -43,7 +43,7 @@ CONTACT_URL = "https://t.me/Ten_genesis"
 
 @dataclass
 class Product:
-    """Represents a single product row from products.xlsx."""
+    """Represents a single product (persisted in data/products.json)."""
     product_id: int
     category:   str
     name:       str
@@ -51,6 +51,8 @@ class Product:
     price:      int
     stock:      int
     photo_id:   str
+    hidden:      bool = False   # admin-hidden products are excluded from customer views
+    description: str  = ""      # admin-editable extra description shown on the card
 
     @property
     def in_stock(self) -> bool:
@@ -78,14 +80,52 @@ class Product:
             )
 
         emoji = CATEGORY_EMOJI.get(self.category, "📦")
+        desc_block = (
+            f"\n📝 {html.escape(self.description)}\n" if self.description else ""
+        )
         return (
             f"{emoji} <b>{self.name}</b>\n\n"
             f"📂 <b>Категория:</b> {self.category}\n"
             f"⚗️ <b>Дозировка:</b> {self.dosage}\n"
             f"💰 <b>Цена:</b> {self.price_formatted}\n"
-            f"{self.stock_label}\n\n"
+            f"{self.stock_label}\n"
+            f"{desc_block}\n"
             f"Для заказа нажмите кнопку ниже."
         )
+
+    def to_dict(self) -> dict:
+        return {
+            "product_id": self.product_id,
+            "category":   self.category,
+            "name":       self.name,
+            "dosage":     self.dosage,
+            "price":      self.price,
+            "stock":      self.stock,
+            "photo_id":   self.photo_id,
+            "hidden":     self.hidden,
+            "description": self.description,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> Optional["Product"]:
+        try:
+            name     = str(d.get("name", "")).strip()
+            category = str(d.get("category", "")).strip()
+            if not name or not category:
+                return None
+            return cls(
+                product_id=int(d["product_id"]),
+                category=category,
+                name=name,
+                dosage=str(d.get("dosage", "")).strip(),
+                price=int(d.get("price", 0)),
+                stock=int(d.get("stock", 0)),
+                photo_id=str(d.get("photo_id", "")).strip(),
+                hidden=bool(d.get("hidden", False)),
+                description=str(d.get("description", "")),
+            )
+        except (ValueError, KeyError, TypeError):
+            return None
 
     @classmethod
     def from_row(cls, row: list) -> Optional["Product"]:

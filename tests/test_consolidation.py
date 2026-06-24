@@ -104,5 +104,6 @@ def test_admin_menu_requires_admin():
     import handlers.admin as adm
     # non-admin gets nothing
     m = MagicMock(); m.from_user.id = 999999; m.answer = AsyncMock()
-    run(adm.cmd_admin(m))
+    state = MagicMock(); state.clear = AsyncMock()
+    run(adm.cmd_admin(m, state))
     m.answer.assert_not_called()

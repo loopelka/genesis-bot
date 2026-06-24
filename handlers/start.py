@@ -11,6 +11,7 @@ from aiogram.types import Message, CallbackQuery
 
 from keyboards import kb_main_menu
 from services.users_service import users_service
+from services.store_settings_service import store_settings_service
 from utils.helpers import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,11 @@ WELCOME_TEXT = (
     "Быстрая доставка по всей России через СДЭК.\n\n"
     "Выберите раздел:"
 )
+store_settings_service.register_defaults({"welcome": WELCOME_TEXT})
+
+
+def _welcome() -> str:
+    return store_settings_service.get("welcome")
 
 
 @router.message(CommandStart())
@@ -34,7 +40,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     )
     logger.info("User %d started the bot", message.from_user.id)
     await message.answer(
-        text=WELCOME_TEXT,
+        text=_welcome(),
         reply_markup=kb_main_menu(),
         parse_mode="HTML",
     )
@@ -47,7 +53,7 @@ async def cb_main_menu(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
     await safe_edit_message(
         message=callback.message,
-        text=WELCOME_TEXT,
+        text=_welcome(),
         reply_markup=kb_main_menu(),
     )
 

@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery
 from keyboards import kb_back_to_main, kb_price_list
 from services import products_service
 from services.models import CATEGORY_EMOJI
+from services.store_settings_service import store_settings_service
 from utils.helpers import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ async def cb_delivery(callback: CallbackQuery) -> None:
     await callback.answer()
     await safe_edit_message(
         message=callback.message,
-        text=DELIVERY_TEXT,
+        text=store_settings_service.get("delivery"),
         reply_markup=kb_back_to_main(),
     )
 
@@ -50,13 +51,18 @@ PAYMENT_TEXT = (
     "🧾 По запросу предоставляем чек об оплате."
 )
 
+store_settings_service.register_defaults({
+    "delivery": DELIVERY_TEXT,
+    "payment": PAYMENT_TEXT,
+})
+
 
 @router.callback_query(F.data == "menu:payment")
 async def cb_payment(callback: CallbackQuery) -> None:
     await callback.answer()
     await safe_edit_message(
         message=callback.message,
-        text=PAYMENT_TEXT,
+        text=store_settings_service.get("payment"),
         reply_markup=kb_back_to_main(),
     )
 

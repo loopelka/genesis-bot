@@ -65,5 +65,11 @@ fsm_state.json
 *.tmp
 *.json.corrupt.*
 
+# Admin-editable store data (mutable runtime state, seeded from xlsx/defaults)
+products.json
+categories.json
+settings.json
+promocodes.json
+
 # Local audit artifacts (kept local, not version-controlled)
 docs/audits/

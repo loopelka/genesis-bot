@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery
 
 from config.faq import FAQ_ENTRIES
 from keyboards import kb_faq_back
+from services.store_settings_service import store_settings_service
 from utils.helpers import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ def _build_faq_text() -> str:
 
 
 FAQ_TEXT = _build_faq_text()
+store_settings_service.register_defaults({"faq": FAQ_TEXT})
 
 
 @router.callback_query(F.data == "menu:faq")
@@ -32,7 +34,7 @@ async def cb_faq_menu(callback: CallbackQuery) -> None:
     """Show full FAQ page with all answers."""
     await callback.answer()
 
-    text = FAQ_TEXT
+    text = store_settings_service.get("faq")
     if len(text) > 4000:
         text = text[:3990] + "\n\n…(продолжение у менеджера: @Ten_genesis)"
 

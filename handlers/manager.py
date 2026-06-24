@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 
 from config import settings
 from keyboards import kb_cancel_manager, kb_back_to_main, kb_main_menu
+from services.store_settings_service import store_settings_service
 from utils import ManagerStates
 from utils.helpers import safe_send_message, safe_edit_message
 
@@ -19,13 +20,20 @@ logger = logging.getLogger(__name__)
 router = Router(name="manager")
 
 CONTACT = "@Ten_genesis"
+store_settings_service.register_defaults({"manager_contacts": CONTACT})
 
-MANAGER_INTRO_TEXT = (
-    "📞 <b>Связь с менеджером</b>\n\n"
-    "Напишите ваш вопрос или сообщение ниже.\n"
-    "Менеджер ответит вам в ближайшее время.\n\n"
-    f"Также вы можете написать напрямую: <b>{CONTACT}</b>"
-)
+
+def _contact() -> str:
+    return store_settings_service.get("manager_contacts")
+
+
+def _manager_intro() -> str:
+    return (
+        "📞 <b>Связь с менеджером</b>\n\n"
+        "Напишите ваш вопрос или сообщение ниже.\n"
+        "Менеджер ответит вам в ближайшее время.\n\n"
+        f"Также вы можете написать напрямую: <b>{_contact()}</b>"
+    )
 
 
 @router.callback_query(F.data == "menu:manager")
@@ -35,7 +43,7 @@ async def cb_manager_start(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(ManagerStates.waiting_message)
     await safe_edit_message(
         message=callback.message,
-        text=MANAGER_INTRO_TEXT,
+        text=_manager_intro(),
         reply_markup=kb_cancel_manager(),
     )
 
@@ -71,7 +79,7 @@ async def msg_receive_manager_message(
             text=(
                 "✅ <b>Сообщение отправлено!</b>\n\n"
                 "Менеджер свяжется с вами в ближайшее время.\n\n"
-                f"Также можно написать напрямую: <b>{CONTACT}</b>"
+                f"Также можно написать напрямую: <b>{_contact()}</b>"
             ),
             reply_markup=kb_back_to_main(),
             parse_mode="HTML",

@@ -127,13 +127,16 @@ class OrdersService:
         comment: str = "",
         customer_country: str = "",
         source: str = "single",
+        promo_code: str = "",
+        discount: int = 0,
     ) -> str:
         """
         Persist a new order with status 'new' and return its id.
 
         `items` is a list of {product_id, name, dosage, price, qty} dicts — a
         price/name snapshot captured at order time so the record stays accurate
-        even if the catalog later changes.
+        even if the catalog later changes. `total` is the final amount payable
+        (after any promo `discount`).
         """
         async with self._lock:
             await self._ensure_loaded()
@@ -161,6 +164,8 @@ class OrdersService:
                     }
                     for it in items
                 ],
+                "promo_code": promo_code or "",
+                "discount": int(discount),
                 "total": int(total),
             }
             await asyncio.get_event_loop().run_in_executor(None, self._save_sync)

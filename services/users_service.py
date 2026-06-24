@@ -74,11 +74,16 @@ class UsersService:
     async def register(self, user_id: int, username: Optional[str] = None) -> bool:
         """
         Register a user. Returns True if the user is new, False if already known.
+        Stores first-seen timestamp on first registration (kept on later updates).
         """
         async with self._lock:
             await self._ensure_loaded()
             is_new = user_id not in self._users
-            self._users[user_id] = {"username": username or ""}
+            existing = self._users.get(user_id, {})
+            record = {"username": username or ""}
+            # Preserve the original first-seen timestamp; set it once for new users.
+            record["registered_ts"] = existing.get("registered_ts") or time.time()
+            self._users[user_id] = record
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, self._save_sync)
             if is_new:
@@ -94,6 +99,26 @@ class UsersService:
         async with self._lock:
             await self._ensure_loaded()
             return len(self._users)
+
+    async def count_since(self, since_ts: float) -> int:
+        """Number of users first seen at or after `since_ts`. Entries without a
+        timestamp (legacy) are treated as older and excluded."""
+        async with self._lock:
+            await self._ensure_loaded()
+            return sum(
+                1 for u in self._users.values()
+                if (u.get("registered_ts") or 0) >= since_ts
+            )
+
+    async def get_user(self, user_id: int) -> Optional[dict]:
+        async with self._lock:
+            await self._ensure_loaded()
+            rec = self._users.get(int(user_id))
+            if rec is None:
+                return None
+            out = dict(rec)
+            out["user_id"] = int(user_id)
+            return out
 
 
 users_service = UsersService()
